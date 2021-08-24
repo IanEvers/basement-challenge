@@ -7,8 +7,10 @@ import favicon from "../public/favicon.svg";
 import footer from "../public/footer.svg";
 import hexa1 from "../public/hexa1.svg";
 import hexa2 from "../public/hexa2.svg";
-import { useEffect, useState } from "react";
+import { createContext, FC, SetStateAction, useContext, useEffect, useState } from "react";
 import {Product} from '../public/product/types';
+import { Fragment, useRef } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
 
 function Header() {
   return(
@@ -49,21 +51,10 @@ function TextoBasement() {
   )
 }
 
-function ProductCard(product: Product) {
-  return (
-    <div  key={product.id}>
-      <div className="bg-gradient-to-b from-black to-gray-900 border-b-2 flex justify-center">
-        <Image alt={product.name} src={product.image} width="400px" height="500px"/>
-      </div>
-      <div className="pt-2 flex flex-row justify-between text-lg">
-        <h2>{product.name}</h2>
-        <h2>${product.price}</h2>
-      </div>
-    </div>
-  )
-}
 
 function ProductosGrid() {
+  const [data,setData]=useState([]);
+
   const getData=()=>{
     fetch('product/mock.json'
     ,{
@@ -84,7 +75,8 @@ function ProductosGrid() {
     getData()
   },[])
 
-  const [data,setData]=useState([]);
+
+  // const cart = useCart();
 
   // meto todo en un array nuevo totalmente al pedo
   let productos = new Array()
@@ -95,13 +87,34 @@ function ProductosGrid() {
  
   return (
     <div className="p-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-      
-      {productos.map(producto =>
-        ProductCard(producto)
-      )}
+      {productos.map(ProductCard)}
     </div>   
   )
 }
+
+function ProductCard(product: Product) {
+
+  const {products: currentProducts, setProducts} = useCart();
+  
+  function agregarAlCart(product : Product) {
+    const updatedCart = [...currentProducts, product];
+    setProducts(updatedCart);
+  }
+  
+  return (
+    <div key={product.id} className="cursor-pointer" onClick={() => agregarAlCart(product)}>
+      <div className="bg-gradient-to-b from-black to-gray-900 border-b-2 flex justify-center">
+        <Image alt={product.name} src={product.image} width="400px" height="500px"/>
+      </div>
+      <div className="pt-2 flex flex-row justify-between text-lg">
+        <h2>{product.name}</h2>
+        <h2>${product.price}</h2>
+      </div>
+    </div>
+  )
+}
+
+
 
 function Footer() {
   return  (
@@ -126,16 +139,72 @@ function Tetrahedros() {
   )
 }
 
+function Cart() {
+  const [open, setOpen] = useState(true)
+  const cancelButtonRef = useRef(null)
+  const [cartItems, setCartItems] = useState<Product[]>([])
+
+  const {products: currentProducts, setProducts} = useCart();
+
+  return(
+    <div className="fixed pin z-50 overflow-auto bg-smoke-light flex flex-row flex-end right-0">
+      <div className="relative p-8 bg-black border-b border-l w-full max-w-md m-auto flex-col flex h-full sm:h-auto">
+        <p>
+          → Close
+        </p>
+        <div className="font-bold text-8xl">
+          <p className="text-white"> YOUR  </p> <p className=""> CART</p>
+
+        </div>
+
+      </div>
+      
+
+    </div>
+  )
+}
+
+function CartProduct(product : Product) {
+  return (
+    <div className="border-2 "></div>
+  )
+}
+
+type CartContextType = {
+  products: Product[],
+  setProducts: React.Dispatch<SetStateAction<Product[]>>
+}
+
+const CartContext = createContext<CartContextType>({
+  products: [],
+  setProducts: (products) => {}
+})
+
+const useCart = () => useContext(CartContext)
+
+const CartProvider: React.FC = ({children}) => {
+
+  const [products, setProducts] = useState<Product[]>([])
+
+  return (
+    <CartContext.Provider value={{products, setProducts}}>
+      {children}
+    </CartContext.Provider>
+  )
+}
+
 const Home: NextPage = () => {
   return (
     <div>
-      
-      <Tetrahedros />
-      <Header />
-      <TextoBasement />
-      <ProductosGrid />
-      <Footer />
-    
+      <CartProvider>
+        {/* <Tetrahedros /> */}
+        <Cart />
+        <Header />
+        <TextoBasement />
+        <ProductosGrid />
+        <Footer />
+      </CartProvider>
+
     </div>
   );
 };
